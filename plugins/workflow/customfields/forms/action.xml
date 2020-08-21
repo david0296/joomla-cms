@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+	<fields name="options">
+		<fieldset name="customfields"
+			label="Fields"
+		>
+			<field
+				name="publishing"
+				type="workflowcondition"
+				label="PLG_WORKFLOW_PUBLISHING_TRANSITION_ACTIONS_PUBLISHING_LABEL"
+				description="PLG_WORKFLOW_PUBLISHING_TRANSITION_ACTIONS_PUBLISHING_DESC"
+				default=""
+				hide_all="true"
+				>
+				<option value="1">JYES</option>
+				<option value="0">JNO</option>
+			</field>
+		</fieldset>
+	</fields>
+</form>
