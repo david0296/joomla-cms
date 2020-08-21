@@ -30,7 +30,7 @@ use Joomla\String\Inflector;
  *
  * @since  4.0.0
  */
-class PlgWorkflowCustomfields extends CMSPlugin implements SubscriberInterface
+class PlgWorkflowCustomFields extends CMSPlugin implements SubscriberInterface
 {
 	use WorkflowPluginTrait;
 
@@ -122,7 +122,7 @@ class PlgWorkflowCustomfields extends CMSPlugin implements SubscriberInterface
 			return true;
 		}
 
-		$form->setFieldAttribute('customfields', 'extension', $workflow->extension, 'options');
+		$form->setFieldAttribute('customFields', 'extension', $workflow->extension, 'options');
 
 		return true;
 	}
@@ -156,7 +156,7 @@ class PlgWorkflowCustomfields extends CMSPlugin implements SubscriberInterface
 		$table = $component->getMVCFactory()->createModel($modelName, $this->app->getName(), ['ignore_request' => true])
 			->getTable();
 
-		$fieldname = $table->getColumnAlias('customfields');
+		$fieldname = $table->getColumnAlias('customFields');
 
 		$options = $form->getField($fieldname)->options;
 
@@ -209,7 +209,7 @@ class PlgWorkflowCustomfields extends CMSPlugin implements SubscriberInterface
 	 */
 	public function onWorkflowBeforeTransition(WorkflowTransitionEvent $event)
 	{
-		$context    = $event->getArgument('extension');
+		/*$context    = $event->getArgument('extension');
 		$transition = $event->getArgument('transition');
 		$pks        = $event->getArgument('pks');
 
@@ -223,7 +223,7 @@ class PlgWorkflowCustomfields extends CMSPlugin implements SubscriberInterface
 		if (!is_numeric($value))
 		{
 			return true;
-		}
+		}*/
 
 		return true;
 	}

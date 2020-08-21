@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <form>
 	<fields name="options">
-		<fieldset name="customfields"
+		<fieldset name="customFields"
 			label="Fields"
 		>
 			<field
