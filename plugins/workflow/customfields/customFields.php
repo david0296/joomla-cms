@@ -93,109 +93,12 @@ class PlgWorkflowCustomFields extends CMSPlugin implements SubscriberInterface
 		// Extend the transition form
 		if ($context === 'com_workflow.transition')
 		{
-			$this->enhanceTransitionForm($form, $data);
+			$this->enhanceWorkflowTransitionForm($form, $data);
 
 			return;
 		}
 
-		$this->enhanceItemForm($form, $data);
-
 		return;
-	}
-
-	/**
-	 * Add different parameter options to the transition view, we need when executing the transition
-	 *
-	 * @param   Form      $form The form
-	 * @param   stdClass  $data The data
-	 *
-	 * @return  boolean
-	 *
-	 * @since   4.0.0
-	 */
-	protected function enhanceTransitionForm(Form $form, $data)
-	{
-		$workflow = $this->enhanceWorkflowTransitionForm($form, $data);
-
-		if (!$workflow)
-		{
-			return true;
-		}
-
-		$form->setFieldAttribute('customFields', 'extension', $workflow->extension, 'options');
-
-		return true;
-	}
-
-	/**
-	 * Disable certain fields in the item  form view, when we want to take over this function in the transition
-	 * Check also for the workflow implementation and if the field exists
-	 *
-	 * @param   Form      $form  The form
-	 * @param   stdClass  $data  The data
-	 *
-	 * @return  boolean
-	 *
-	 * @since   4.0.0
-	 */
-	protected function enhanceItemForm(Form $form, $data)
-	{
-		$context = $form->getName();
-
-		if (!$this->isSupported($context))
-		{
-			return true;
-		}
-
-		$parts = explode('.', $context);
-
-		$component = $this->app->bootComponent($parts[0]);
-
-		$modelName = $component->getModelName($context);
-
-		$table = $component->getMVCFactory()->createModel($modelName, $this->app->getName(), ['ignore_request' => true])
-			->getTable();
-
-		$fieldname = $table->getColumnAlias('customFields');
-
-		$options = $form->getField($fieldname)->options;
-
-		$value = isset($data->$fieldname) ? $data->$fieldname : $form->getValue($fieldname, null, 0);
-
-		$text = '-';
-
-		$textclass = 'body';
-
-		switch ($value)
-		{
-			case 1:
-				$textclass = 'success';
-				break;
-
-			case 0:
-			case -2:
-				$textclass = 'danger';
-		}
-
-		if (!empty($options))
-		{
-			foreach ($options as $option)
-			{
-				if ($option->value == $value)
-				{
-					$text = $option->text;
-
-					break;
-				}
-			}
-		}
-
-		$form->setFieldAttribute($fieldname, 'type', 'spacer');
-
-		$label = '<span class="text-' . $textclass . '">' . htmlentities($text, ENT_COMPAT, 'UTF-8') . '</span>';
-		$form->setFieldAttribute($fieldname, 'label', Text::sprintf('PLG_WORKFLOW_PUBLISHING_PUBLISHED', $label));
-
-		return true;
 	}
 
 	/**
@@ -209,21 +112,21 @@ class PlgWorkflowCustomFields extends CMSPlugin implements SubscriberInterface
 	 */
 	public function onWorkflowBeforeTransition(WorkflowTransitionEvent $event)
 	{
-		/*$context    = $event->getArgument('extension');
+		$context    = $event->getArgument('extension');
 		$transition = $event->getArgument('transition');
 		$pks        = $event->getArgument('pks');
 
-		if (!$this->isSupported($context) || !is_numeric($transition->options->get('publishing')))
+		if (!$this->isSupported($context) || !is_numeric($transition->options->get('test')))
 		{
 			return true;
 		}
 
-		$value = $transition->options->get('publishing');
+		$value = $transition->options->get('test');
 
 		if (!is_numeric($value))
 		{
 			return true;
-		}*/
+		}
 
 		return true;
 	}
@@ -251,7 +154,7 @@ class PlgWorkflowCustomFields extends CMSPlugin implements SubscriberInterface
 
 		$component = $this->app->bootComponent($extensionName);
 
-		$value = $transition->options->get('publishing');
+		$value = $transition->options->get('test');
 
 		if (!is_numeric($value))
 		{
@@ -269,6 +172,26 @@ class PlgWorkflowCustomFields extends CMSPlugin implements SubscriberInterface
 		$model = $component->getMVCFactory()->createModel($modelName, $this->app->getName(), $options);
 
 		$model->publish($pks, $value);
+	}
+
+	public function onContentBeforeChangeState(EventInterface $event)
+	{
+		$context = $event->getArgument('0');
+		$pks     = $event->getArgument('1');
+
+		if (!$this->isSupported($context))
+		{
+			return true;
+		}
+
+		// We have whitelisted the pks, so we're the one who triggered
+		// With onWorkflowBeforeTransition => free pass
+		if ($this->app->get('plgWorkflowPublishing.' . $context) === $pks)
+		{
+			return true;
+		}
+
+		throw new Exception(Text::_('PLG_WORKFLOW_PUBLISHING_CHANGE_STATE_NOT_ALLOWED'));
 	}
 
 

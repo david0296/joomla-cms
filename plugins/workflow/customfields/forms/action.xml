@@ -5,10 +5,10 @@
 			label="Fields"
 		>
 			<field
-				name="publishing"
-				type="workflowcondition"
-				label="PLG_WORKFLOW_PUBLISHING_TRANSITION_ACTIONS_PUBLISHING_LABEL"
-				description="PLG_WORKFLOW_PUBLISHING_TRANSITION_ACTIONS_PUBLISHING_DESC"
+				name="test"
+				type="list"
+				label="Label"
+				description="Desc"
 				default=""
 				hide_all="true"
 				>
