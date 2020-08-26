@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+	<fields name="options">
+		<fieldset name="actions"
+			label="COM_WORKFLOW_TRANSITION_ACTIONS_LABEL"
+		>
+			<field
+				name="category"
+				type="list"
+				label="Category"
+				description="Define the category of an item, when executing this transition"
+				default=""
+				hide_all="true"
+				>
+				<option value="">JOPTION_DO_NOT_USE</option>
+			</field>
+		</fieldset>
+	</fields>
+</form>
