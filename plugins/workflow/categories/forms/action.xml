@@ -6,7 +6,8 @@
 		>
 			<field
 				name="category"
-				type="list"
+				type="category"
+				extension="com_content"
 				label="Category"
 				description="Define the category of an item, when executing this transition"
 				default=""

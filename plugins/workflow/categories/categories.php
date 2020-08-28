@@ -24,6 +24,7 @@ use Joomla\CMS\Workflow\WorkflowServiceInterface;
 use Joomla\Event\EventInterface;
 use Joomla\Event\SubscriberInterface;
 use Joomla\String\Inflector;
+use Joomla\CMS\Categories\Categories;
 
 /**
  * Workflow Categories Plugin
@@ -158,7 +159,7 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 		$table = $component->getMVCFactory()->createModel($modelName, $this->app->getName(), ['ignore_request' => true])
 			->getTable();
 
-		$fieldname = $table->getColumnAlias('published');
+		$fieldname = $table->getColumnAlias('catid');
 
 		$options = $form->getField($fieldname)->options;
 
@@ -195,7 +196,7 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 		$form->setFieldAttribute($fieldname, 'type', 'spacer');
 
 		$label = '<span class="text-' . $textclass . '">' . htmlentities($text, ENT_COMPAT, 'UTF-8') . '</span>';
-		$form->setFieldAttribute($fieldname, 'label', Text::sprintf('PLG_WORKFLOW_PUBLISHING_PUBLISHED', $label));
+		$form->setFieldAttribute($fieldname, 'label', Text::sprintf('Category: %s', $label));
 
 		return true;
 	}
@@ -226,6 +227,12 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 		{
 			return true;
 		}
+		$model_categories = Categories::getInstance('com_content');
+		$root = $model_categories->get('root');
+		$categories = array();
+		foreach ($root->getChildren() as $category){
+			array_push($categories,$category->title);
+		}
 
 		// That's the hard coded list from the AdminController publish method => change, when it's make dynamic in the future
 		$states = [
@@ -246,7 +253,7 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 					return;
 				}
 
-				" . \json_encode($states) . ".forEach((action) => {
+				" . \json_encode($categories) . ".forEach((action) => {
 					var button = document.getElementById('status-group-children-' + action);
 
 					if (button)
@@ -283,7 +290,7 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 			return true;
 		}
 
-		$value = $transition->options->get('publishing');
+		$value = $transition->options->get('category');
 
 		if (!is_numeric($value))
 		{
