@@ -73,7 +73,6 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 			'onAfterDisplay'              => 'onAfterDisplay',
 			'onWorkflowBeforeTransition'  => 'onWorkflowBeforeTransition',
 			'onWorkflowAfterTransition'   => 'onWorkflowAfterTransition',
-			'onContentBeforeChangeState'  => 'onContentBeforeChangeState',
 			'onContentBeforeSave'         => 'onContentBeforeSave',
 			'onWorkflowFunctionalityUsed' => 'onWorkflowFunctionalityUsed',
 		];
@@ -163,22 +162,23 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 
 		$options = $form->getField($fieldname)->options;
 
-		$value = isset($data->$fieldname) ? $data->$fieldname : $form->getValue($fieldname, null, 0);
+		$value = isset($data->$fieldname) ? $data->$fieldname : (isset($form->$fieldname) ? $form->getValue($fieldname):null);
+		//if(!$value) return true;
+
+		if(!$form->getFieldAttribute($fieldname,'value')){
+			$form->setFieldAttribute($fieldname,'value',$value);
+		}
+
+		$foo = $form->getFieldAttribute($fieldname,'value');
+		$bar = $form->getField($fieldname);
+
+		if(!$form->getFieldAttribute($fieldname,'value')){
+			$form->setFieldAttribute($fieldname,'value',$value);
+		}
 
 		$text = '-';
 
 		$textclass = 'body';
-
-		switch ($value)
-		{
-			case 1:
-				$textclass = 'success';
-				break;
-
-			case 0:
-			case -2:
-				$textclass = 'danger';
-		}
 
 		if (!empty($options))
 		{
@@ -192,9 +192,9 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 				}
 			}
 		}
-
+		//Entferne Drop Down
 		$form->setFieldAttribute($fieldname, 'type', 'spacer');
-
+		//Setze Label mit Cat-Namen
 		$label = '<span class="text-' . $textclass . '">' . htmlentities($text, ENT_COMPAT, 'UTF-8') . '</span>';
 		$form->setFieldAttribute($fieldname, 'label', Text::sprintf('Category: %s', $label));
 
@@ -227,11 +227,13 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 		{
 			return true;
 		}
+
 		$model_categories = Categories::getInstance('com_content');
 		$root = $model_categories->get('root');
 		$categories = array();
+
 		foreach ($root->getChildren() as $category){
-			array_push($categories,$category->title);
+			array_push($categories, $category->title);
 		}
 
 		// That's the hard coded list from the AdminController publish method => change, when it's make dynamic in the future
@@ -282,10 +284,10 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 	public function onWorkflowBeforeTransition(WorkflowTransitionEvent $event)
 	{
 		$context    = $event->getArgument('extension');
+		$extensionName = $event->getArgument('extensionName');
 		$transition = $event->getArgument('transition');
-		$pks        = $event->getArgument('pks');
 
-		if (!$this->isSupported($context) || !is_numeric($transition->options->get('publishing')))
+		if (!$this->isSupported($context) || !is_numeric($transition->options->get('category')))
 		{
 			return true;
 		}
@@ -297,29 +299,10 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 			return true;
 		}
 
-		/**
-		 * Here it becomes tricky. We would like to use the component models publish method, so we will
-		 * Execute the normal "onContentBeforeChangeState" plugins. But they could cancel the execution,
-		 * So we have to precheck and cancel the whole transition stuff if not allowed.
-		 */
-		$this->app->set('plgWorkflowPublishing.' . $context, $pks);
-
-		$result = $this->app->triggerEvent('onContentBeforeChangeState', [
-			$context,
-			$pks,
-			$value
-			]
-		);
-
-		// Release whitelist, the job is done
-		$this->app->set('plgWorkflowPublishing.' . $context, []);
-
-		if (\in_array(false, $result, true))
-		{
-			return false;
-		}
+		$component = $this->app->bootComponent($extensionName);
 
 		return true;
+
 	}
 
 	/**
@@ -345,7 +328,7 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 
 		$component = $this->app->bootComponent($extensionName);
 
-		$value = $transition->options->get('publishing');
+		$value = $transition->options->get('category');
 
 		if (!is_numeric($value))
 		{
@@ -360,40 +343,21 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 
 		$modelName = $component->getModelName($context);
 
-		$model = $component->getMVCFactory()->createModel($modelName, $this->app->getName(), $options);
+		$model = $component->getMVCFactory()->createModel($modelName, $this->app->getName(), []);
 
-		$model->publish($pks, $value);
-	}
 
-	/**
-	 * Change State of an item. Used to disable state change
-	 *
-	 * @param   EventInterface  $event
-	 *
-	 * @return boolean
-	 *
-	 * @throws Exception
-	 * @since   4.0.0
-	 */
-	public function onContentBeforeChangeState(EventInterface $event)
-	{
-		$context = $event->getArgument('0');
-		$pks     = $event->getArgument('1');
-
-		if (!$this->isSupported($context))
-		{
-			return true;
+		foreach ($pks as $pk){
+			$article = $model->getItem($pk);
+			$article->set('catid',$value);
+			$model->save((array) $article);
 		}
 
-		// We have whitelisted the pks, so we're the one who triggered
-		// With onWorkflowBeforeTransition => free pass
-		if ($this->app->get('plgWorkflowPublishing.' . $context) === $pks)
-		{
-			return true;
-		}
 
-		throw new Exception(Text::_('PLG_WORKFLOW_PUBLISHING_CHANGE_STATE_NOT_ALLOWED'));
+
+		return true;
+
 	}
+
 
 	/**
 	 * The save event.
@@ -418,23 +382,13 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 			return true;
 		}
 
-		$keyName = $table->getColumnAlias('published');
+		$keyName = $table->getColumnAlias('catid');
 
 		// Check for the old value
 		$article = clone $table;
 
 		$article->load($table->id);
 
-		/**
-		 * We don't allow the change of the state when we use the workflow
-		 * As we're setting the field to disabled, no value should be there at all
-		 */
-		if (isset($data[$keyName]))
-		{
-			$this->app->enqueueMessage(Text::_('PLG_WORKFLOW_PUBLISHING_CHANGE_STATE_NOT_ALLOWED'), 'error');
-
-			return false;
-		}
 
 		return true;
 	}
@@ -483,7 +437,7 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 
 		$table = $model->getTable();
 
-		if (!$table instanceof TableInterface || !$table->hasField('published'))
+		if (!$table instanceof TableInterface || !$table->hasField('catid'))
 		{
 			return false;
 		}
