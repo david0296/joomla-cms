@@ -95,12 +95,15 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 		// Extend the transition form
 		if ($context === 'com_workflow.transition')
 		{
-			$this->enhanceTransitionForm($form, $data);
+			$this->enhanceWorkflowTransitionForm($form, $data);
 
 			return;
 		}
+		$field = $form->getField('catid');
 
 		$this->enhanceItemForm($form, $data);
+
+		$field = $form->getField('catid');
 
 		return;
 	}
@@ -161,20 +164,21 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 		$fieldname = $table->getColumnAlias('catid');
 
 		$options = $form->getField($fieldname)->options;
+		$value = isset($data->$fieldname) ? $data->$fieldname : $form->getValue($fieldname);
+		$test = $form->getValue($fieldname);
 
-		$value = isset($data->$fieldname) ? $data->$fieldname : (isset($form->$fieldname) ? $form->getValue($fieldname):null);
-		//if(!$value) return true;
+		// If we create a new article, we don't want to disable the drop-down
+		if(!$form->getValue('id')){
 
-		if(!$form->getFieldAttribute($fieldname,'value')){
-			$form->setFieldAttribute($fieldname,'value',$value);
+			if(count((array)$data)>0){
+
+				if(!((array) $data)['id']){
+
+					return true;
+				}
+			}
 		}
 
-		$foo = $form->getFieldAttribute($fieldname,'value');
-		$bar = $form->getField($fieldname);
-
-		if(!$form->getFieldAttribute($fieldname,'value')){
-			$form->setFieldAttribute($fieldname,'value',$value);
-		}
 
 		$text = '-';
 
@@ -194,9 +198,15 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 		}
 		//Entferne Drop Down
 		$form->setFieldAttribute($fieldname, 'type', 'spacer');
+		$form->setValue($fieldname, $value);
+
+
 		//Setze Label mit Cat-Namen
 		$label = '<span class="text-' . $textclass . '">' . htmlentities($text, ENT_COMPAT, 'UTF-8') . '</span>';
 		$form->setFieldAttribute($fieldname, 'label', Text::sprintf('Category: %s', $label));
+
+		//Category Field wird nicht mehr benötigt
+		$form->setFieldAttribute($fieldname,'required', false);
 
 		return true;
 	}
@@ -349,7 +359,11 @@ class PlgWorkflowCategories extends CMSPlugin implements SubscriberInterface
 		foreach ($pks as $pk){
 			$article = $model->getItem($pk);
 			$article->set('catid',$value);
-			$model->save((array) $article);
+			$data = (array) $article;
+			unset($data['featured']);
+			unset($data['state']);
+
+			$model->save($data);
 		}
 
 
